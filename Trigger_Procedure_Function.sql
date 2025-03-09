@@ -10,7 +10,7 @@ BEGIN
         WHERE CheckInDate < BookingDate
     )
     BEGIN
-        RAISERROR ('Check-in date must be after booking date', 16, 1);
+        RAISERROR ('Check-in date must be on or after booking date', 16, 1);
         ROLLBACK TRANSACTION;
     END;
 END;
@@ -24,10 +24,10 @@ BEGIN
     IF EXISTS (
         SELECT 1 
         FROM inserted 
-        WHERE CheckOutDate <= CheckInDate
+        WHERE CheckOutDate < CheckInDate
     )
     BEGIN
-        RAISERROR ('Check-out date must be after check-in date', 16, 1);
+        RAISERROR ('Check-out date must be on after check-in date', 16, 1);
         ROLLBACK TRANSACTION;
     END;
 END;
@@ -51,15 +51,67 @@ BEGIN
     END;
 END;
 GO
+--Fix
+ALTER TRIGGER trg_ValidatePayment 
+ON PAYMENT
+AFTER INSERT
+AS 
+BEGIN 
+    DECLARE @BookingID INT;
+    DECLARE @Amount DECIMAL(10,2);
+    DECLARE @TotalRoomPrice DECIMAL(10,2);
+    DECLARE @Overpayment DECIMAL(10,2);
+
+    -- Lấy thông tin từ inserted
+    SELECT 
+        @BookingID = i.BookingID,
+        @Amount = i.Amount
+    FROM inserted i;
+
+    -- Tính tổng tiền phòng
+    SELECT @TotalRoomPrice = 
+        CASE 
+            WHEN b.CheckInDate = b.CheckOutDate THEN r.RoomPrice * 1
+            ELSE r.RoomPrice * DATEDIFF(DAY, b.CheckInDate, b.CheckOutDate)
+        END
+    FROM BOOKING b
+    JOIN ROOM r ON b.RoomID = r.RoomID
+    WHERE b.BookingID = @BookingID;
+
+    -- Tính số tiền thừa (nếu có)
+    SET @Overpayment = CASE 
+        WHEN @Amount > @TotalRoomPrice THEN @Amount - @TotalRoomPrice 
+        ELSE 0 
+    END;
+
+    -- Báo thông tin số tiền thừa (nếu có)
+    IF @Overpayment > 0
+    BEGIN
+        DECLARE @Message NVARCHAR(100);
+        SET @Message = 'Overpayment detected: ' + CAST(@Overpayment AS NVARCHAR(20)) + ' VND';
+        RAISERROR (@Message, 10, 1); -- Mức 10 là thông báo, không rollback
+    END;
+END;
+GO
+
 --4. Procedure tạo booking mới
 CREATE PROCEDURE CreateBooking
-    @CustomerID INT,
+	--Customer
+	@Name VARCHAR(100),
+	@DOB DATE,
+	@Email VARCHAR(100),
+	@PhoneNumber VARCHAR(15),
+	--Room
+	@CustomerID INT,
     @RoomID INT,
     @BookingDate DATE,
     @CheckInDate DATE,
     @CheckOutDate DATE
 AS
 BEGIN
+	INSERT INTO CUSTOMER (Name, DOB, Email, PhoneNumber)
+	VALUES (@Name, @DOB, @Email, @PhoneNumber)
+
     INSERT INTO BOOKING (CustomerID, RoomID, BookingDate, CheckInDate, CheckOutDate, BookingStatus)
     VALUES (@CustomerID, @RoomID, @BookingDate, @CheckInDate, @CheckOutDate, 'Pending');
 END;
@@ -88,6 +140,36 @@ BEGIN
     RETURN ISNULL(@TotalAmount, 0);
 END;
 GO
+--Fix
+ALTER FUNCTION GetTotalAmount (@BookingID INT) 
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @TotalAmount DECIMAL(10,2);
+    DECLARE @CheckInDate DATE;
+    DECLARE @CheckOutDate DATE;
+    DECLARE @RoomPrice DECIMAL(10,2);
+
+    -- Lấy thông tin từ BOOKING và ROOM
+    SELECT 
+        @CheckInDate = b.CheckInDate,
+        @CheckOutDate = b.CheckOutDate,
+        @RoomPrice = r.RoomPrice
+    FROM BOOKING b
+    JOIN ROOM r ON b.RoomID = r.RoomID
+    WHERE b.BookingID = @BookingID;
+
+    -- Tính tổng tiền
+    SET @TotalAmount = 
+        CASE 
+            WHEN @CheckInDate = @CheckOutDate THEN @RoomPrice * 1  -- Cùng ngày: Tính 1 ngày
+            ELSE @RoomPrice * DATEDIFF(DAY, @CheckInDate, @CheckOutDate)  -- Khác ngày: Tính như cũ
+        END;
+
+    RETURN ISNULL(@TotalAmount, 0);
+END;
+GO
+
 --7. Function kiểm tra phòng trống
 CREATE FUNCTION IsRoomAvailable (@RoomID INT) 
 RETURNS BIT

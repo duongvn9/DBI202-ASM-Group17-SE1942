@@ -6,6 +6,7 @@ SELECT * FROM PAYMENT
 SELECT * FROM STAFF
 SELECT * FROM ROOM_SERVICE
 
+------------------TEST QUERY--------------------------
 --Kiểm tra phòng trống
 SELECT r.RoomID, r.RoomType, r.RoomPrice, r.RoomStatus
 FROM ROOM r
@@ -19,6 +20,7 @@ AND NOT EXISTS (
         (b.CheckInDate <= '2025-03-15' AND b.CheckOutDate >= '2025-03-10')
     )
 )
+
 --Deluxe
 SELECT *
 FROM ROOM
@@ -238,3 +240,42 @@ LEFT JOIN BOOKING b ON r.RoomID = b.RoomID
 LEFT JOIN PAYMENT p ON b.BookingID = p.BookingID AND p.PaymentStatus = 'Paid'
 GROUP BY r.RoomID, r.RoomType, r.RoomPrice
 ORDER BY TotalRevenue ASC;
+
+
+--------CHECK PROCEDURE------------
+-- Tạo booking
+EXEC CreateBooking 
+	--CUSTOMER
+	@Name = 'Monome',
+	@DOB = '2005-07-06',
+	@Email = 'conmeobeo@gmail.com',
+	@PhoneNumber = '0123456789',
+	--BOOKING
+    @CustomerID = 21, 
+    @RoomID = 20, 
+    @BookingDate = '2025-03-10', 
+    @CheckInDate = '2025-03-11', 
+    @CheckOutDate = '2025-03-13';
+-- Kết quả: Thêm 1 dòng vào BOOKING, BookingStatus = 'Pending'.
+
+-- Kiểm tra
+SELECT * FROM BOOKING WHERE CustomerID = 21 AND RoomID = 20;
+
+---------------CHECK FUNCTION------------------
+-- Kiểm tra phòng
+SELECT dbo.IsRoomAvailable(1) AS IsAvailable;
+-- Kết quả: 1 nếu RoomStatus = 'Available', 0 nếu khác.
+
+-- Dùng trong query
+SELECT RoomID, RoomType, RoomPrice
+FROM ROOM
+WHERE dbo.IsRoomAvailable(RoomID) = 1;
+-- Kết quả: Liệt kê các phòng trống.
+
+SELECT *
+FROM ROOM 
+WHERE dbo.IsRoomAvailable(RoomID) = 1
+
+
+SELECT dbo.GetTotalAmount(1) AS TotalCost;
+
