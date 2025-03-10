@@ -45,6 +45,7 @@ INSERT INTO ROOM (RoomType, RoomPrice, RoomStatus) VALUES
 ('Single', 540000.00, 'Available');
 
 -- Insert SERVICE
+
 INSERT INTO SERVICE (ServiceName, ServicePrice, ServiceDescription) VALUES
 ('Laundry', 50000.00, N'Giặt là quần áo'),
 ('Breakfast', 100000.00, N'Bữa sáng tự chọn'),

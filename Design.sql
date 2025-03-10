@@ -44,7 +44,7 @@ CREATE TABLE SERVICE (
     ServiceID INT PRIMARY KEY IDENTITY(1,1),
     ServiceName VARCHAR(100) NOT NULL UNIQUE CHECK (ServiceName NOT LIKE '%[^A-Za-z ]%'),
     ServicePrice DECIMAL(10,2) NOT NULL CHECK (ServicePrice >= 0),
-    ServiceDescription VARCHAR(255) NULL
+    ServiceDescription NVARCHAR(255) NULL
 );
 
 -- Tạo bảng STAFF
