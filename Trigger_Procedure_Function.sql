@@ -38,25 +38,6 @@ ON PAYMENT
 AFTER INSERT
 AS 
 BEGIN 
-    IF EXISTS (
-        SELECT 1 
-        FROM inserted i
-        JOIN BOOKING b ON i.BookingID = b.BookingID
-        JOIN ROOM r ON b.RoomID = r.RoomID
-        WHERE i.Amount > (r.RoomPrice * DATEDIFF(DAY, b.CheckInDate, b.CheckOutDate))
-    )
-    BEGIN
-        RAISERROR ('Payment amount exceeds total room price', 16, 1);
-        ROLLBACK TRANSACTION;
-    END;
-END;
-GO
---Fix
-ALTER TRIGGER trg_ValidatePayment 
-ON PAYMENT
-AFTER INSERT
-AS 
-BEGIN 
     DECLARE @BookingID INT;
     DECLARE @Amount DECIMAL(10,2);
     DECLARE @TotalRoomPrice DECIMAL(10,2);
@@ -129,19 +110,6 @@ END;
 GO
 --6. Function tính tổng tiền booking
 CREATE FUNCTION GetTotalAmount (@BookingID INT) 
-RETURNS DECIMAL(10,2)
-AS
-BEGIN
-    DECLARE @TotalAmount DECIMAL(10,2);
-    SELECT @TotalAmount = SUM(r.RoomPrice * DATEDIFF(DAY, b.CheckInDate, b.CheckOutDate))
-    FROM BOOKING b
-    JOIN ROOM r ON b.RoomID = r.RoomID
-    WHERE b.BookingID = @BookingID;
-    RETURN ISNULL(@TotalAmount, 0);
-END;
-GO
---Fix
-ALTER FUNCTION GetTotalAmount (@BookingID INT) 
 RETURNS DECIMAL(10,2)
 AS
 BEGIN
