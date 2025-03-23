@@ -1,10 +1,10 @@
 ﻿-- Tạo bảng CUSTOMER
 CREATE TABLE CUSTOMER (
     CustomerID INT PRIMARY KEY IDENTITY(1,1),
-    Name VARCHAR(100) NOT NULL CHECK (Name NOT LIKE '%[^A-Za-z ]%'),
+    Name NVARCHAR(100) NOT NULL CHECK (Name NOT LIKE '%[^A-Za-z ]%'), 
     DOB DATE NOT NULL CHECK (DOB <= GETDATE()),
     Email VARCHAR(100) NOT NULL UNIQUE,
-    PhoneNumber VARCHAR(15) NOT NULL UNIQUE CHECK (PhoneNumber NOT LIKE '%[^0-9]%')
+    PhoneNumber VARCHAR(10) NOT NULL UNIQUE CHECK (PhoneNumber NOT LIKE '%[^0-9]%') 
 );
 
 -- Tạo bảng ROOM

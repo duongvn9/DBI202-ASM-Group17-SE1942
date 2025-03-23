@@ -279,3 +279,4 @@ WHERE dbo.IsRoomAvailable(RoomID) = 1
 
 SELECT dbo.GetTotalAmount(1) AS TotalCost;
 
+SELECT * FROM CUSTOMER
