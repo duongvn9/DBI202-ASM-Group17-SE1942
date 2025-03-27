@@ -243,26 +243,39 @@ ORDER BY TotalRevenue ASC;
 
 
 --------CHECK PROCEDURE------------
--- Tạo booking
+SELECT * FROM BOOKING
+SELECT * FROM PAYMENT
+-- 5. Xử lí thanh toán
+DECLARE @id INT
+SET @id = 2
+DECLARE @amount DECIMAL
+SET @amount = (SELECT Amount FROM PAYMENT WHERE BookingID = @id) 
+
+EXEC ProcessPayment
+	@BookingID = @id,
+	@Amount = @amount,
+	@PaymentMethod = 'Cash';
+
+-- 4. Tạo booking
 EXEC CreateBooking 
 	--CUSTOMER
-	@Name = 'Monome',
+	@Name = 'Nguyen Viet Hoang',
 	@DOB = '2005-07-06',
-	@Email = 'conmeobeo@gmail.com',
-	@PhoneNumber = '0123456789',
+	@Email = 'conmeobeobeo@gmail.com',
+	@PhoneNumber = '0866903661',
 	--BOOKING
-    @CustomerID = 21, 
+    @CustomerID = 22, 
     @RoomID = 20, 
-    @BookingDate = '2025-03-10', 
-    @CheckInDate = '2025-03-11', 
-    @CheckOutDate = '2025-03-13';
+    @BookingDate = '2025-03-27', 
+    @CheckInDate = '2025-03-28', 
+    @CheckOutDate = '2025-03-29';
 -- Kết quả: Thêm 1 dòng vào BOOKING, BookingStatus = 'Pending'.
 
 -- Kiểm tra
-SELECT * FROM BOOKING WHERE CustomerID = 21 AND RoomID = 20;
+SELECT * FROM BOOKING WHERE CustomerID = 22 AND RoomID = 20;
 
 ---------------CHECK FUNCTION------------------
--- Kiểm tra phòng
+--7. Kiểm tra phòng trống
 SELECT dbo.IsRoomAvailable(1) AS IsAvailable;
 -- Kết quả: 1 nếu RoomStatus = 'Available', 0 nếu khác.
 
@@ -276,7 +289,26 @@ SELECT *
 FROM ROOM 
 WHERE dbo.IsRoomAvailable(RoomID) = 1
 
-
+-- 6. Tính tiền Booking
 SELECT dbo.GetTotalAmount(1) AS TotalCost;
 
 SELECT * FROM CUSTOMER
+
+-----------CHECK TRIGGER---------------
+SELECT * FROM BOOKING
+--1. Checkin cùng/sau BookingDate tương tự 2
+EXEC CreateNewBooking 
+--customer
+    @Name = 'ABC',
+    @DOB = '2005-07-31',
+    @Email = 'conmeo123@gmail.com',
+    @PhoneNumber = '0264893888',
+--room
+    @RoomID = 15, 
+    @BookingDate = '2025-03-29', 
+    @CheckInDate = '2025-03-28', 
+    @CheckOutDate = '2025-03-29';
+
+--3. Check giá trả
+SELECT * FROM PAYMENT
+EXEC ProcessPayment @BookingID = 2, @Amount = 2500000.00, @PaymentMethod = 'Cash';

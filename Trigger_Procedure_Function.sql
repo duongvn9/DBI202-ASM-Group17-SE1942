@@ -10,8 +10,8 @@ BEGIN
         WHERE CheckInDate < BookingDate
     )
     BEGIN
-        RAISERROR ('Check-in date must be on or after booking date', 16, 1);
-        ROLLBACK TRANSACTION;
+        THROW 50001, 'Check-in date must be on or after booking date', 1;
+        -- Không ROLLBACK, để procedure xử lý
     END;
 END;
 GO
@@ -27,8 +27,8 @@ BEGIN
         WHERE CheckOutDate < CheckInDate
     )
     BEGIN
-        RAISERROR ('Check-out date must be on after check-in date', 16, 1);
-        ROLLBACK TRANSACTION;
+        THROW 50002, 'Check-out date must be on or after check-in date', 1;
+        -- Không ROLLBACK, để procedure xử lý
     END;
 END;
 GO
@@ -76,25 +76,42 @@ END;
 GO
 
 --4. Procedure tạo booking mới
-CREATE PROCEDURE CreateBooking
-	--Customer
+CREATE PROCEDURE CreateNewBooking
 	@Name VARCHAR(100),
 	@DOB DATE,
 	@Email VARCHAR(100),
 	@PhoneNumber VARCHAR(15),
-	--Room
-	@CustomerID INT,
-    @RoomID INT,
-    @BookingDate DATE,
-    @CheckInDate DATE,
-    @CheckOutDate DATE
+	@RoomID INT,
+	@BookingDate DATE,
+	@CheckInDate DATE,
+	@CheckOutDate DATE
 AS
 BEGIN
-	INSERT INTO CUSTOMER (Name, DOB, Email, PhoneNumber)
-	VALUES (@Name, @DOB, @Email, @PhoneNumber)
+    SET NOCOUNT ON; -- Ngăn thông báo "rows affected" gây nhầm lẫn
+    BEGIN TRY
+        BEGIN TRANSACTION;
 
-    INSERT INTO BOOKING (CustomerID, RoomID, BookingDate, CheckInDate, CheckOutDate, BookingStatus)
-    VALUES (@CustomerID, @RoomID, @BookingDate, @CheckInDate, @CheckOutDate, 'Pending');
+        -- Thêm khách hàng
+        INSERT INTO CUSTOMER (Name, DOB, Email, PhoneNumber)
+        VALUES (@Name, @DOB, @Email, @PhoneNumber);
+        DECLARE @CustomerID INT = SCOPE_IDENTITY();
+
+        -- Kiểm tra RoomID
+        IF NOT EXISTS (SELECT 1 FROM ROOM WHERE RoomID = @RoomID)
+            THROW 50002, 'RoomID does not exist.', 1;
+
+        -- Thêm booking (trigger sẽ kiểm tra)
+        INSERT INTO BOOKING (CustomerID, RoomID, BookingDate, CheckInDate, CheckOutDate, BookingStatus)
+        VALUES (@CustomerID, @RoomID, @BookingDate, @CheckInDate, @CheckOutDate, 'Pending');
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        -- Chỉ rollback nếu giao dịch còn tồn tại
+        WHILE @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW; -- Ném lỗi ra ngoài
+    END CATCH;
 END;
 GO
 --5. Procedure xử lý thanh toán

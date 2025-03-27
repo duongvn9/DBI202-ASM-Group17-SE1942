@@ -4,7 +4,7 @@ CREATE TABLE CUSTOMER (
     Name NVARCHAR(100) NOT NULL CHECK (Name NOT LIKE '%[^A-Za-z ]%'), 
     DOB DATE NOT NULL CHECK (DOB <= GETDATE()),
     Email VARCHAR(100) NOT NULL UNIQUE,
-    PhoneNumber VARCHAR(10) NOT NULL UNIQUE CHECK (PhoneNumber NOT LIKE '%[^0-9]%') 
+    PhoneNumber CHAR(10) NOT NULL UNIQUE CHECK (PhoneNumber NOT LIKE '%[^0-9]%') 
 );
 
 -- Tạo bảng ROOM
